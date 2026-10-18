@@ -63,6 +63,15 @@
     ;; There are still one copy of $x on the stack to return
   )
 
+  ;; Returns a random floating-point number in the range [0, 1).
+  (func $randf (result f64)
+    call $rand
+    f64.convert_i32_u
+    f64.const 4294967296.0  ;; 2^32
+    f64.div
+  )
+
   (export "set_seed" (func $set_seed))
   (export "rand" (func $rand))
+  (export "randf" (func $randf))
 )
