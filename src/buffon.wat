@@ -124,7 +124,7 @@
       ;; randomly select an angle for the needle and compute the distance
       ;; to the nearest line
       call $randf
-      f64.const 3.14159265359  ;; π
+      f64.const 1.5707963267948966  ;; π/2
       f64.mul
       call $sin
       f64.const 0.5
