@@ -74,61 +74,92 @@
 
   ;; WebAssembly does not have a built-in sine function, so we will implement it
   ;; ourselves using Horner's method for the Taylor series expansion with hardcoded
-  ;; coefficients for the Taylor series expansion: 1/6, 1/20, 1/42
-  ;;
-  ;; Horner's method for sine: x * (1 - 1/6 * x^2 * (1 - 1/20 * x^2 * (1 - 1/42 * x^2)))
-  ;;
-  ;; 1/6  ≈ 0.16666666667
-  ;; 1/20 ≈ 0.05
-  ;; 1/42 ≈ 0.0238095238
+  ;; coefficients.
+  ;;     sin x ≈ x * (1 - 1/6 * x^2 * (1 - 1/20 * x^2 * (1 - 1/42 * x^2)))
   (func $sin (param $x f64) (result f64)
-    ;; temporary variables
-    (local $t1 f64)
-    (local $t2 f64)
-    (local $t3 f64)
     (local $x2 f64)  ;; store x^2 for reuse
     
     local.get $x
     local.get $x
     f64.mul
-    local.set $x2
+    local.tee $x2             ;; copy without popping
     
     ;; innermost term: (1 - 1/42 * x^2)
+    f64.const -0.0238095238   ;; ≈ -1/42
+    f64.mul                   ;; - 1/42 * x^2
     f64.const 1.0
-    local.get $x2
-    f64.const 0.0238095238  ;; 1/42
-    f64.mul
-    f64.sub
-    local.set $t1
+    f64.add                   ;; 1 - 1/42 * x^2
 
-    ;; middle term: (1 - 1/20 * x^2 * t1)
-    f64.const 1.0
-    f64.const 0.05  ;; 1/20
+    ;; middle term: (1 - 1/20 * x^2 * (...))
+    f64.const -0.05           ;; -1/20
     local.get $x2
-    local.get $t1
-    f64.mul
-    f64.mul
-    f64.sub
-    local.set $t2
+    f64.mul                   ;; -1/20 * x^2 
+    f64.mul                   ;; -1/20 * x^2 * (1 - 1/42 * x^2)
+    f64.const 1.0
+    f64.add                   ;; 1 - 1/20 * x^2 * (1 - 1/42 * x^2)
 
-    ;; outermost term: (1 - 1/6 * x^2 * t2)
-    f64.const 1.0
-    f64.const 0.16666666667  ;; 1/6
+    ;; outermost term: (1 - 1/6 * x^2 * (...))
+    f64.const -0.16666666667  ;; ≈ -1/6
     local.get $x2
-    local.get $t2
-    f64.mul
-    f64.mul
-    f64.sub
-    local.set $t3
+    f64.mul                   ;; -1/6 * x^ 2 
+    f64.mul                   ;; -1/6 * x^ 2 * (1 - 1/20 * x^2 * (1 - 1/42 * x^2))
+    f64.const 1.0
+    f64.add                   ;; 1 - 1/6 * x^ 2 * (1 - 1/20 * x^2 * (1 - 1/42 * x^2))
 
     ;; multiply by x to get the final sine value
     local.get $x
-    local.get $t3
     f64.mul
   )
 
+  (func $run_simulation (param $throws i32) (result f64)
+    (local $hits i32)  ;; holds the number of times the needle crossed a line
+    (local $i i32)  ;; loop counter
+
+    (loop $main
+      ;; randomly select a position fo the center of the needle
+      call $randf
+      f64.const 0.5
+      f64.mul
+
+      ;; randomly select an angle for the needle and compute the distance
+      ;; to the nearest line
+      call $randf
+      f64.const 3.14159265359  ;; π
+      f64.mul
+      call $sin
+      f64.const 0.5
+      f64.mul
+
+      ;; compare both values and update the hit count
+      f64.le           ;; pushes 1 to the stack if x <= sin(θ)/2, 0 otherwise
+      local.get $hits
+      i32.add
+      local.set $hits  ;; branchless update
+
+      ;; increment loop counter
+      local.get $i
+      i32.const 1
+      i32.add
+      local.tee $i  ;; copy without popping
+
+      ;; keep while i < $throws
+      local.get $throws
+      i32.lt_u
+      br_if $main
+    )
+
+    ;; --- Compute pi ---
+    ;; numerator: 2 * $throws
+    local.get $throws
+    f64.convert_i32_u
+    f64.const 2.0
+    f64.mul
+    ;; denominator: $hits
+    local.get $hits
+    f64.convert_i32_u
+    f64.div
+  )
+
   (export "set_seed" (func $set_seed))
-  (export "rand" (func $rand))
-  (export "randf" (func $randf))
-  (export "sin" (func $sin))
+  (export "run_simulation" (func $run_simulation))
 )

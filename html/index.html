@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <title>Buffon's Needle WASM</title>
-    <style>
-
-    </style>
 </head>
 <body>
+  <input type="number" id="throws" value="1000">
+  <button id="run">Run Simulation</button>
+  <div id="output"></div>
+
   <script type="module">
     const wasm = await WebAssembly.instantiateStreaming(fetch('./buffon.wasm'));
     const buffon = wasm.instance.exports;
 
-    const pi_half = Math.PI / 2;
-    for (let i=0; i < 10; i++) {
-      const val = i * pi_half / 10;
-      console.log(buffon.sin(val) + " : " + Math.sin(val));
-    }
+    const output = document.getElementById("output");
+    document.getElementById("run").addEventListener("click", () => {
+      const throws = parseInt(document.getElementById("throws").value);
+      document.getElementById("output").textContent = buffon.run_simulation(throws);
+    });
   </script>
 </body>
 </html>
