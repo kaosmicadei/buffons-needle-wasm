@@ -12,8 +12,10 @@
     const wasm = await WebAssembly.instantiateStreaming(fetch('./buffon.wasm'));
     const buffon = wasm.instance.exports;
 
+    const pi_half = Math.PI / 2;
     for (let i=0; i < 10; i++) {
-      console.log(buffon.rand());
+      const val = i * pi_half / 10;
+      console.log(buffon.sin(val) + " : " + Math.sin(val));
     }
   </script>
 </body>
